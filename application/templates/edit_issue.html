@@ -1,0 +1,33 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<h1>Edit Issue</h1>
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        
+        <div>
+            {{ form.title.label }}<br>
+            {{ form.title(size=40) }}
+        </div>
+        <div>
+            {{ form.author.label }}<br>
+            {{ form.author(size=40) }}
+        </div>
+        <div>
+            {{ form.file.label }}<br>
+            {{ form.file() }}
+        </div>
+        <div>
+            {{ form.issued_time.label }}<br>
+            {{ form.issued_time() }}
+        </div>
+        <div>
+            {{ form.view_power.label }}<br>
+            {{ form.view_power() }}
+        </div>
+        <div>
+            {{ form.submit() }}
+        </div>
+    </form>
+
+{% endblock %}

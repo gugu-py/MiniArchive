@@ -1,0 +1,123 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --background-gradient: linear-gradient(135deg, var(--primary-color), var(--link-color));
+    }
+
+    .not-found-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+        text-align: center;
+        background: var(--background-gradient);
+        color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        animation: fadeIn 1.5s ease-out;
+    }
+
+    .not-found-container h1 {
+        font-size: 12vw;
+        font-weight: 900;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.9);
+        text-shadow: 0px 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .not-found-container p {
+        font-size: 1.5em;
+        margin: 10px 0 20px;
+        color: var(--secondary-color);
+        animation: slideInUp 1s ease-out;
+    }
+
+    .not-found-container .actions {
+        margin: 20px 0;
+        display: flex;
+        gap: 20px;
+    }
+
+    .not-found-container a {
+        color: #ffffff;
+        background-color: var(--link-color);
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 1.1em;
+        transition: all 0.3s ease;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .not-found-container a:hover {
+        background-color: rgba(255, 255, 255, 0.9);
+        color: var(--link-color);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .emoji-container {
+        font-size: 100px;
+        margin: 20px 0;
+        animation: float 3s infinite ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideInUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .not-found-container h1 {
+            font-size: 16vw;
+        }
+        .not-found-container p {
+            font-size: 1.2em;
+        }
+        .not-found-container .actions a {
+            font-size: 1em;
+            padding: 10px 16px;
+        }
+    }
+</style>
+
+<div class="not-found-container">
+    <h1>404</h1>
+    <p>Oops! The page you were looking for doesn’t exist.</p>
+    <p>But don’t worry, we’ll help you find your way.</p>
+    <div class="actions">
+        <a href="{{ url_for('main.index') }}">Go to Homepage</a>
+    </div>
+    <div class="emoji-container" id="emoji">🚀</div>
+</div>
+
+
+{% endblock %}

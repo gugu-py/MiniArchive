@@ -1,0 +1,13 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Upload Newspaper Issue</h2>
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    {{ form.title.label }} {{ form.title(size=32) }}<br>
+    {{ form.author.label }} {{ form.author(size=32) }}<br>
+    {{ form.issued_time.label }} {{ form.issued_time() }}<br>
+    {{ form.file.label }} {{ form.file() }}<br>
+    {{ form.view_power.label }} {{ form.view_power() }}<br>
+    {{ form.submit() }}
+</form>
+{% endblock %}

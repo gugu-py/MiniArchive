@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+
+{% block custom_styles %}
+{% endblock %}
+
+{% block content %}
+<h2>Welcome here to explore the archive! (Landing Page)</h2>
+
+{% if current_user.is_authenticated %}
+    {% include 'search_form.html' %}
+{% else %}
+    <p>You need to <a href="{{ url_for('main.login') }}">login</a> to explore the archive.</p>
+{% endif %}
+
+<!-- Divider Line -->
+<hr class="divider">
+
+{% if current_user.is_authenticated and current_user.role=='admin' %}
+<a href="{{ url_for('main.edit_about') }}">Admin, edit about here.</a>
+{% endif %}
+<div class="about-content">
+    <!-- Render the About section content here -->
+    {{ about_content|safe }}
+</div>
+
+{% endblock %}

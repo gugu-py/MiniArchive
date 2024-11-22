@@ -1,0 +1,12 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+Flask-WTF
+PyMySQL
+gunicorn
+google-cloud
+google-cloud-storage
+pdfplumber
+flask_caching
+markdown
+# Remove specific version numbers to avoid conflicts

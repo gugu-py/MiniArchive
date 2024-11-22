@@ -1,0 +1,22 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<!-- Form for creating new users -->
+<h2>Create New User</h2>
+<form method="POST">
+    {{ create_form.hidden_tag() }}
+    <div class="form-group">
+        {{ create_form.new_username.label }}
+        {{ create_form.new_username(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ create_form.new_password.label }}
+        {{ create_form.new_password(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ create_form.new_view_power.label }}
+        {{ create_form.new_view_power(class="form-control") }}
+    </div>
+    {{ create_form.create(class="btn btn-success") }}
+</form>
+{% endblock %}

@@ -1,0 +1,183 @@
+<!-- templates/view_pdf.html -->
+{% extends 'layout.html' %}
+
+{% block custom_styles %}
+<style>
+    /* Container for the entire document */
+    .document-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Header section styling */
+    .document-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .document-header h2 {
+        font-size: 2.5em;
+        color: var(--primary-color);
+        margin-bottom: 10px;
+    }
+
+    .document-header .meta-info {
+        font-size: 1em;
+        color: #555;
+    }
+
+    .document-header .meta-info p {
+        margin: 5px 0;
+    }
+
+    .document-header .download-links {
+        margin-top: 15px;
+    }
+
+    .document-header .download-links a {
+        color: var(--link-color);
+        text-decoration: none;
+        margin-right: 15px;
+        font-weight: bold;
+    }
+
+    .document-header .download-links a:hover {
+        text-decoration: underline;
+    }
+
+    /* Tip section styling */
+    .document-tip {
+        background-color: var(--secondary-color);
+        padding: 15px;
+        border-left: 5px solid var(--primary-color);
+        margin-bottom: 30px;
+        font-size: 1em;
+        line-height: 1.5;
+    }
+
+    .document-tip strong {
+        color: var(--primary-color);
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="document-container">
+    <!-- Document Header -->
+    <div class="document-header">
+        <h2>{{ issue.title }}</h2>
+        <div class="meta-info">
+            <p><strong>Author:</strong> {{ issue.author }}</p>
+            <p><strong>Issued on:</strong> {{ issue.issued_time.strftime('%Y-%m-%d') }}</p>
+        </div>
+        <div class="download-links">
+            <a href="{{ url_for('main.view_text', issue_id=issue.id) }}">View Text Version</a>
+            <a href="{{ file_url }}" target="_blank">Download PDF</a>
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated and current_user.role=='admin' %}
+    <div class="document-tip">
+        <h2>Admin Actions:</h2>
+        <a href="{{ url_for('main.edit_issue', issue_id=issue.id)}}">edit issue</a>
+        <form method="POST" action="{{ url_for('main.delete_issue', issue_id=issue.id) }}">
+            <button type="submit">Delete(No Confirm)</button>
+        </form>
+        <p>doc view power: {{ issue.view_power }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Tip Section -->
+    <div class="document-tip">
+        <strong>Tip:</strong> The download and view link for this file is temporary and will expire after a few minutes. 
+        <br>Click on the document and press <kbd>Ctrl</kbd> + <kbd>F</kbd> (Windows/Linux) or <kbd>⌘</kbd> + <kbd>F</kbd> (Mac) to search within the document.
+    </div>
+    
+
+    <!-- PDF Viewer -->
+    <iframe
+    src="https://drive.google.com/viewerng/viewer?embedded=true&url={{file_url}}"
+    width="100%"
+    height="600px"
+    style="border: none;"
+    allowfullscreen>
+    </iframe>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const iframe = document.querySelector("iframe");
+            const button = document.createElement("button");
+    
+            // Set up the button's initial properties
+            button.textContent = "Expand View";
+            button.style.display = "block";
+            button.style.margin = "10px auto";
+            button.style.padding = "10px 15px";
+            button.style.backgroundColor = "var(--primary-color)";
+            button.style.color = "var(--secondary-color)";
+            button.style.border = "none";
+            button.style.borderRadius = "5px";
+            button.style.cursor = "pointer";
+            button.style.fontSize = "1rem";
+    
+            // Append the button after the iframe
+            iframe.parentElement.appendChild(button);
+    
+            // Expand or collapse the iframe when the button is clicked
+            button.addEventListener("click", () => {
+                if (!iframe.classList.contains("expanded")) {
+                    expandIframe();
+                } else {
+                    collapseIframe();
+                }
+            });
+    
+            // Function to expand the iframe
+            function expandIframe() {
+                iframe.classList.add("expanded");
+                iframe.style.position = "fixed";
+                iframe.style.top = "50%";
+                iframe.style.left = "50%";
+                iframe.style.transform = "translate(-50%, -50%)";
+                iframe.style.width = "90%";
+                iframe.style.height = "90vh";
+                iframe.style.zIndex = "1000";
+                iframe.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.5)";
+                iframe.style.border = "2px solid var(--primary-color)";
+                button.textContent = "Collapse View";
+    
+                // Add click listener to collapse when clicking outside
+                document.addEventListener("click", outsideClickListener);
+            }
+    
+            // Function to collapse the iframe
+            function collapseIframe() {
+                iframe.classList.remove("expanded");
+                iframe.style.position = "static";
+                iframe.style.transform = "none";
+                iframe.style.width = "100%";
+                iframe.style.height = "600px";
+                iframe.style.zIndex = "auto";
+                iframe.style.boxShadow = "none";
+                iframe.style.border = "none";
+                button.textContent = "Expand View";
+    
+                // Remove click listener for outside clicks
+                document.removeEventListener("click", outsideClickListener);
+            }
+    
+            // Function to handle clicks outside the iframe
+            function outsideClickListener(event) {
+                if (!iframe.contains(event.target) && !button.contains(event.target)) {
+                    collapseIframe();
+                }
+            }
+        });
+    </script>
+    
+    
+    
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+<!-- templates/manage_users.html -->
+{% extends 'layout.html' %}
+
+{% block content %}
+<h2>Manage Users</h2>
+<div>
+    <p>check 'confirm' to confirm the according user's change(include delete). If not checked, nothing will change.</p>
+    <p><a href="{{ url_for('main.add_user') }}">add user here</a></p>
+</div>
+<form method="POST">
+    {{ manage_form.hidden_tag() }}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Confirm</th>
+                <th>Delete</th>
+                <th>User ID</th>
+                <th>Username</th>
+                <th>New Password</th>
+                <th>View Power</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user_form in manage_form.users %}
+            <tr>
+                <td>{{ user_form.confirm }}</td>
+                <td>{{ user_form.delete }}</td>
+                <!-- Display the user_id directly -->
+                <td>{{ user_form.user_id.data }}</td>
+                <td>{{ user_form.username }}</td>
+                <td>{{ user_form.password }}</td>
+                <td>{{ user_form.view_power }}</td>
+                {{ user_form.hidden_tag() }}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary">{{ manage_form.submit.label.text }}</button>
+</form>
+{% endblock %}

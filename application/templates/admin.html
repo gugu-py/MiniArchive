@@ -1,0 +1,10 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Admin Dashboard</h2>
+<ul>
+    <li><a href="{{ url_for('main.upload') }}">Upload</a></li>
+    <li><a href="{{ url_for('main.edit_about') }}">Edit About</a></li>
+    <li><a href="{{ url_for('main.manage_stopwords') }}">Manage Stopwords</a></li>
+    <li><a href="{{ url_for('main.manage_users') }}">Manage Users</a></li>
+</ul>
+{% endblock %}

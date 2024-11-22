@@ -1,0 +1,12 @@
+<!-- templates/manage_stopwords.html -->
+
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Manage Stopwords(use space to seperate each stopword)</h2>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    {{ form.stopwords.label }}<br>
+    {{ form.stopwords }}<br><br>
+    {{ form.submit() }}
+</form>
+{% endblock %}

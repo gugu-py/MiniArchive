@@ -1,13 +1,112 @@
 {% extends 'layout.html' %}
 {% block content %}
+<style>
+    form {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--secondary-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+        color: var(--primary-color);
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    input[type="text"], input[type="file"], select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--accent-color);
+        border-radius: 4px;
+        background-color: var(--secondary-color);
+    }
+
+    input[type="file"] {
+        padding: 5px;
+    }
+
+    input[type="text"]:focus, select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .checkbox-container {
+        display: flex;
+        align-items: center;
+    }
+
+    .checkbox-container input {
+        margin-right: 10px;
+    }
+
+    .submit-button {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        color: white;
+        background-color: var(--primary-color);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .submit-button:hover {
+        background-color: var(--link-color);
+    }
+</style>
+
 <h2>Upload Newspaper Issue</h2>
 <form method="POST" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
-    {{ form.title.label }} {{ form.title(size=32) }}<br>
-    {{ form.author.label }} {{ form.author(size=32) }}<br>
-    {{ form.issued_time.label }} {{ form.issued_time() }}<br>
-    {{ form.file.label }} {{ form.file() }}<br>
-    {{ form.view_power.label }} {{ form.view_power() }}<br>
-    {{ form.submit() }}
+
+    <div class="form-group">
+        <label for="{{ form.title.id }}">{{ form.title.label.text }}</label>
+        {{ form.title(class="form-control") }}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.author.id }}">{{ form.author.label.text }}</label>
+        {{ form.author(class="form-control") }}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.issued_time.id }}">{{ form.issued_time.label.text }}</label>
+        {{ form.issued_time(class="form-control") }}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.file.id }}">{{ form.file.label.text }}</label>
+        {{ form.file(class="form-control") }}
+    </div>
+
+    <div class="form-group checkbox-container">
+        {{ form.view_power() }}
+        <label for="{{ form.view_power.id }}">{{ form.view_power.label.text }}</label>
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.category.id }}">{{ form.category.label.text }}</label>
+        {{ form.category(class="form-control") }}
+    </div>
+
+    <button type="submit" class="submit-button">{{ form.submit.label.text }}</button>
 </form>
 {% endblock %}

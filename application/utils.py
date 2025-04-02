@@ -1,4 +1,4 @@
-from flask import redirect, url_for, flash, current_app
+from flask import redirect, url_for, flash, current_app, abort
 from flask_login import current_user
 from werkzeug.security import generate_password_hash
 import uuid
@@ -8,10 +8,15 @@ import datetime
 from functools import wraps
 import markdown
 from datetime import timedelta
+from sqlalchemy.orm import joinedload
 
 from . import cache
-from .models import db, User, NewspaperIssue, Config
+from .models import db, User, NewspaperIssue, Config, Category
 from .forms import *
+
+    # List of month names
+MONTHS_LIST = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 def generate_random_filename() -> str:
     """
@@ -115,7 +120,11 @@ def remove_stopwords(query: str) -> str:
     filtered_words = [word for word in words if word.lower() not in stopwords]
     return ' '.join(filtered_words)
 
-def create_signed_url(file_blob: str, tmp_blob_name: str) -> str:
+def clean_query(query: str) -> str:
+    query=remove_stopwords(query).lower()
+    return query
+
+def create_signed_url(file_blob: str, tmp_blob_name: str = "") -> str:
     """
     Generates a signed URL for a file in Google Cloud Storage and caches it.
 
@@ -133,15 +142,63 @@ def create_signed_url(file_blob: str, tmp_blob_name: str) -> str:
     # Generate signed URL
     signed_url = blob.generate_signed_url(
         version="v4",
-        expiration=timedelta(minutes=current_app.config['FILE_LINK_EXPIRE_TIME_MIN']),  # Set link expiration time
+        expiration=timedelta(minutes=current_app.config['FILE_LINK_EXPIRE_TIME_SEC']),  # Set link expiration time
         method='GET'
     )
-    cache.set(
-        key="signed_url"+tmp_blob_name,
-        value=str(signed_url),
-        timeout=current_app.config['FILE_LINK_EXPIRE_TIME_MIN']-1
-    )
     return signed_url
+
+@cache.memoize(timeout=86400)
+def get_year_month_issues(year: int,month: int) -> NewspaperIssue:
+    """
+    Retrieves all newspaper issues for a specific year and month that the current user is authorized to view.
+
+    This function filters issues based on the provided year and month, ensuring that the user's view power 
+    is sufficient to access the issues. The results are cached for 24 hours (86400 seconds) to improve performance.
+
+    Args:
+        year (int): The year for which issues are to be retrieved.
+        month (int): The month for which issues are to be retrieved.
+
+    Returns:
+        list[NewspaperIssue]: A list of newspaper issues ordered by their issued time in ascending order.
+
+    Caching:
+        The result of this function is cached for 24 hours to minimize redundant database queries.
+    """
+    issues = NewspaperIssue.query.filter(
+        db.extract('year', NewspaperIssue.issued_time) == year,
+        db.extract('month', NewspaperIssue.issued_time) == month,
+        NewspaperIssue.view_power <= current_user.view_power
+    ).order_by(NewspaperIssue.issued_time.asc()).all()
+    return issues
+
+@cache.memoize(timeout=86400)
+def get_day_issues(year: int, month: int, day: int) -> list:
+    """
+    Retrieves all newspaper issues for a specific year, month, and day that the current user is authorized to view.
+
+    This function filters issues based on the provided year, month, and day, ensuring that the user's view power
+    is sufficient to access the issues. The results are cached for 24 hours (86400 seconds) to improve performance.
+
+    Args:
+        year (int): The year for which issues are to be retrieved.
+        month (int): The month for which issues are to be retrieved.
+        day (int): The day for which issues are to be retrieved.
+
+    Returns:
+        list[NewspaperIssue]: A list of newspaper issues ordered by their issued time in ascending order.
+
+    Caching:
+        The result of this function is cached for 24 hours to minimize redundant database queries.
+    """
+    issues = NewspaperIssue.query.filter(
+        db.extract('year', NewspaperIssue.issued_time) == year,
+        db.extract('month', NewspaperIssue.issued_time) == month,
+        db.extract('day', NewspaperIssue.issued_time) == day,
+        NewspaperIssue.view_power <= current_user.view_power
+    ).order_by(NewspaperIssue.issued_time.asc()).all()
+    return issues
+
 
 @cache.memoize(timeout=86400)
 def get_issue(issue_id: int) -> NewspaperIssue:
@@ -158,8 +215,12 @@ def get_issue(issue_id: int) -> NewspaperIssue:
     Raises:
         werkzeug.exceptions.NotFound: If no issue is found with the given ID.
     """
-    issue = NewspaperIssue.query.get_or_404(issue_id)
+    issue = NewspaperIssue.query.options(joinedload(NewspaperIssue.category)).get_or_404(issue_id)
     return issue
+
+@cache.cached(key_prefix="get_all_category", timeout=86400)
+def get_all_category():
+    return Category.query.all()
 
 def get_db_signed_url(blob_name: str) -> str:
     """
@@ -180,8 +241,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_admin():  # Check if the user has admin role
-            flash('You do not have permission to access this page.', 'danger')
-            return redirect(url_for('main.search'))  # Redirect to dashboard or any other page
+            return abort(401)
         return f(*args, **kwargs)
     return decorated_function
 
@@ -201,3 +261,43 @@ def ini_users() -> None:
         admin_user = User(username=current_app.config['ADMIN_USERNAME'], password_hash=generate_password_hash(current_app.config['ADMIN_PASSWORD']), role='admin', view_power=100)
         db.session.add(admin_user)
         db.session.commit()
+
+def update_cache(modified_issue: NewspaperIssue) -> None:
+    """
+    Updates the application cache to ensure consistency after a newspaper issue is modified.
+
+    This function invalidates cache entries that might be affected by changes to the 
+    given issue, ensuring stale data is removed. Specifically, it clears cached results for:
+    - Issue retrieval by ID, date ranges, and specific time intervals (year, month, day).
+    - Functions retrieving the archive or related metadata like issue date intervals.
+    - Category-related functions to reflect potential changes in categorization.
+
+    Args:
+        modified_issue (NewspaperIssue): The newspaper issue object that was modified.
+
+    Cache Entries Invalidated:
+        - `get_issue_date_interval`: Clears the date range cache.
+        - `get_archive`: Clears the entire archive cache.
+        - `get_issue`: Clears the cache for the specific issue by ID.
+        - `get_year_month_issues`: Clears cached issues for the issue's year and month.
+        - `get_day_issues`: Clears cached issues for the issue's specific day.
+        - `get_all_category`: Clears category-related caches in case of category updates.
+
+    Returns:
+        None
+    """
+    cache.delete('get_issue_date_interval')
+    cache.delete('get_archive')
+    cache.delete_memoized(get_issue, modified_issue.id)
+    cache.delete_memoized(
+        get_year_month_issues,
+        modified_issue.issued_time.year,
+        modified_issue.issued_time.month
+    )
+    cache.delete_memoized(
+        get_day_issues,
+        modified_issue.issued_time.year,
+        modified_issue.issued_time.month,
+        modified_issue.issued_time.day
+    )
+    cache.delete('get_all_category')

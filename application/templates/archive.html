@@ -66,7 +66,7 @@
                 {% set year_month = year ~ '-' ~ month_str %}
                 {% if year_month in issues_by_month %}
                     <div class="month-box has-issue">
-                        <a href="{{ url_for('main.view_document', issue_id=issues_by_month[year_month][0].id) }}">
+                        <a href="{{ month_urls[year ~ '-' ~ month_str] }}">
                             {{ months_list[month_number - 1] }}
                         </a>
                     </div>
@@ -80,4 +80,5 @@
     </div>
     {% endfor %}
 </div>
+
 {% endblock %}

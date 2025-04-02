@@ -1,0 +1,171 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<style>
+    .month-container {
+        margin: 20px;
+    }
+
+    .month-title {
+        font-size: 24px;
+        color: var(--primary-color);
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        text-align: center;
+    }
+
+    .calendar-header {
+        font-weight: bold;
+        background-color: var(--primary-color);
+        color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+    }
+
+    .calendar-cell {
+        height: 100px;
+        border: 1px solid var(--accent-color);
+        border-radius: 5px;
+        background-color: var(--secondary-color);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        position: relative;
+    }
+
+    .calendar-cell a {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        text-decoration: none;
+        color: inherit;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .calendar-cell.has-issue {
+        background-color: var(--primary-color);
+        color: #fff;
+    }
+
+    .calendar-cell.has-issue a {
+        color: #fff;
+    }
+
+    .calendar-cell:hover {
+        box-shadow: 0 0 5px var(--accent-color);
+    }
+
+    .calendar-cell.empty {
+        background-color: #f0f0f0;
+        border: none;
+    }
+
+    .issue-author {
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .back-link {
+        display: block;
+        margin-top: 20px;
+        text-align: center;
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+</style>
+
+<div class="month-container">
+    <div class="month-title">
+        {{ months_list[month - 1] }} {{ year }}
+    </div>
+
+    <!-- Calendar grid -->
+    <div class="calendar">
+        <!-- Days of the week -->
+        <div class="calendar-header">Sun</div>
+        <div class="calendar-header">Mon</div>
+        <div class="calendar-header">Tue</div>
+        <div class="calendar-header">Wed</div>
+        <div class="calendar-header">Thu</div>
+        <div class="calendar-header">Fri</div>
+        <div class="calendar-header">Sat</div>
+
+        <!-- Calendar cells will be filled by JavaScript -->
+    </div>
+
+    <a href="{{ url_for('main.archive') }}" class="back-link">
+        Back to Archive
+    </a>
+</div>
+
+<script>
+    // Serialized issues passed from the backend
+    const issues = {{ issues|tojson }};
+    const year = {{ year }};
+    const month = {{ month }};
+    
+    const calendar = document.querySelector('.calendar');
+    const firstDay = new Date(year, month - 1, 1).getDay(); // Day of the week (0=Sun, 6=Sat)
+    const lastDate = new Date(year, month, 0).getDate(); // Last date of the month
+
+    // Group issues by date
+    const issuesByDate = issues.reduce((grouped, issue) => {
+        const date = new Date(issue.issued_time).getDate();
+        if (!grouped[date]) grouped[date] = [];
+        grouped[date].push(issue);
+        return grouped;
+    }, {});
+
+    // Fill empty cells for the days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.classList.add('calendar-cell', 'empty');
+        calendar.appendChild(emptyCell);
+    }
+
+    // Fill cells with dates
+    for (let date = 1; date <= lastDate; date++) {
+        const cell = document.createElement('div');
+        cell.classList.add('calendar-cell');
+        
+        if (issuesByDate[date]) {
+            cell.classList.add('has-issue');
+            
+            const issuesForDate = issuesByDate[date];
+            const link = document.createElement('a');
+            
+            if (issuesForDate.length === 1) {
+                // Single issue: Link to the issue directly
+                link.href = issuesForDate[0].url;
+                link.textContent = `View Issue: ${issuesForDate[0].title}`;
+            } else {
+                // Multiple issues: Link to the day's issue list
+                link.href = `/archive/${year}/${month}/${date}`; // Adjust endpoint as needed
+                link.textContent = `View ${issuesForDate.length} Issues`;
+            }
+            
+            cell.appendChild(link);
+        } else {
+            cell.textContent = date;
+        }
+        
+        calendar.appendChild(cell);
+    }
+</script>
+
+
+{% endblock %}

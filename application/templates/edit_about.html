@@ -1,15 +1,83 @@
 {% extends 'layout.html' %}
 
 {% block content %}
+<style>
+    form {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--secondary-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+        text-align: center;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--accent-color);
+        border-radius: 4px;
+        background-color: var(--secondary-color);
+        resize: vertical;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    .submit-button {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        color: white;
+        background-color: var(--primary-color);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .submit-button:hover {
+        background-color: var(--link-color);
+    }
+
+    .error {
+        color: var(--error-color);
+        font-size: 14px;
+        margin-top: -8px;
+        margin-bottom: 10px;
+    }
+</style>
+
 <h2>Edit About Page Content</h2>
 
 <form method="POST">
     {{ form.hidden_tag() }}
+
     <div class="form-group">
-        <label for="about_content">About Content (Markdown Syntax)</label>
-        {{ form.about_content(class="form-control", rows=10) }}
+        <label for="{{ form.about_content.id }}">About Content (Markdown Syntax)</label>
+        {{ form.about_content(class="textarea") }}
+        {% if form.about_content.errors %}
+        <div class="error">{{ form.about_content.errors[0] }}</div>
+        {% endif %}
     </div>
-    <button type="submit" class="btn btn-primary">Save Changes</button>
+
+    <button type="submit" class="submit-button">Save Changes</button>
 </form>
 
 {% endblock %}

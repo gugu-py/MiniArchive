@@ -1,33 +1,132 @@
 {% extends 'layout.html' %}
 
 {% block content %}
-<h1>Edit Issue</h1>
-    <form method="POST" enctype="multipart/form-data">
-        {{ form.hidden_tag() }}
-        
-        <div>
-            {{ form.title.label }}<br>
-            {{ form.title(size=40) }}
-        </div>
-        <div>
-            {{ form.author.label }}<br>
-            {{ form.author(size=40) }}
-        </div>
-        <div>
-            {{ form.file.label }}<br>
-            {{ form.file() }}
-        </div>
-        <div>
-            {{ form.issued_time.label }}<br>
-            {{ form.issued_time() }}
-        </div>
-        <div>
-            {{ form.view_power.label }}<br>
-            {{ form.view_power() }}
-        </div>
-        <div>
-            {{ form.submit() }}
-        </div>
-    </form>
+<style>
+    form {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--secondary-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
+    h1 {
+        text-align: center;
+        color: var(--primary-color);
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    input[type="text"], input[type="file"], select, textarea {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border: 1px solid var(--accent-color);
+        border-radius: 4px;
+        background-color: var(--secondary-color);
+    }
+
+    input[type="file"] {
+        padding: 5px;
+    }
+
+    .submit-button {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        color: white;
+        background-color: var(--primary-color);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .submit-button:hover {
+        background-color: var(--link-color);
+    }
+
+    .form-error {
+        color: var(--error-color);
+        font-size: 14px;
+        margin-top: -8px;
+        margin-bottom: 10px;
+    }
+</style>
+
+<h1>Edit Issue</h1>
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+        <label for="{{ form.title.id }}">{{ form.title.label.text }}</label>
+        {{ form.title(size=40) }}
+        {% if form.title.errors %}
+        <div class="form-error">{{ form.title.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.author.id }}">{{ form.author.label.text }}</label>
+        {{ form.author(size=40) }}
+        {% if form.author.errors %}
+        <div class="form-error">{{ form.author.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.file.id }}">{{ form.file.label.text }}</label>
+        {{ form.file() }}
+        {% if form.file.errors %}
+        <div class="form-error">{{ form.file.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.issued_time.id }}">{{ form.issued_time.label.text }}</label>
+        {{ form.issued_time() }}
+        {% if form.issued_time.errors %}
+        <div class="form-error">{{ form.issued_time.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.view_power.id }}">{{ form.view_power.label.text }}</label>
+        {{ form.view_power() }}
+        {% if form.view_power.errors %}
+        <div class="form-error">{{ form.view_power.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form.category.id }}">{{ form.category.label.text }}</label>
+        <select name="{{ form.category.name }}" id="{{ form.category.id }}">
+            {% for value, label in form.category.choices %}
+            <option value="{{ value }}" {% if value == form.category.data %} selected {% endif %}>
+                {{ label }}
+            </option>
+            {% endfor %}
+        </select>
+        {% if form.category.errors %}
+        <div class="form-error">{{ form.category.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div>
+        <button type="submit" class="submit-button">{{ form.submit.label.text }}</button>
+    </div>
+</form>
 {% endblock %}

@@ -9,10 +9,10 @@
     <style>
         /* Customizable color variables */
         :root {
-            --primary-color: #0064a6ad;
-            --secondary-color: rgba(255, 255, 255, 0.8);
-            --accent-color: #cccccc;
-            --link-color: #007571;
+            --primary-color: rgba(40, 98, 161, 0.8);
+            --secondary-color: rgba(255,255,255, 0.8);
+            --accent-color: rgba(63, 142, 136,0.2);
+            --link-color: rgba(63, 142, 136,0.9);
             --error-color: rgba(255, 69, 58, 0.8); /* Modern red shade */
         }
 
@@ -85,7 +85,7 @@
         }
 
         .menu-content a:hover {
-            background-color: var(--accent-color);
+            background-color: var(--link-color);
         }
 
         /* Main content */
@@ -240,14 +240,14 @@
         {% endwith %}
         <!-- Main content area where Jinja2 content will be injected -->
         {% block content %}
-        <h1>Welcome to The Collegian Archives</h1>
-        <p>This is a customizable template for displaying archived newspaper articles.</p>
+        <h1>Welcome to The UWC CSC Archives</h1>
+        <p>This is a customizable template for displaying archived memory.</p>
         {% endblock %}
     </div>
 </main>
 
 <footer>
-    <p>&copy; 2024 The Collegian Archives</p>
+    <p>&copy; 2024 The UWC CSC Archives</p>
 </footer>
 
 <script>

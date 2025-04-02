@@ -1,103 +1,73 @@
-# **Simple Archive Website**
+# MiniArchive
 
-A simple production-ready project for educational purpose. It is a web-based archive system for managing and searching newspaper issues, built using Flask and MySQL with full-text search functionality. The project is deployed on Google Cloud Run.
+A digital archive for *The Challenger*, our school's newspaper, offering secure access, streamlined content management, and an intuitive user experience.
 
----
+## Project Origin
 
-## **Features**
+This project started from an informal chat during supper with Joseph, Giulio, and Richard. Recognizing the need for a web archive for *The Challenger*, I quickly developed a proposal. Within 24 hours, leveraging my knowledge of Flask and MySQL, a functional prototype was presented, impressing the team and setting the foundation for a collaborative effort.
 
-- **Search Functionality:** Full-text search using MySQL.
-- **Organized Storage:** Archive newspaper issues with metadata like issue date and author.
-- **Efficient Deployment:** Deployed on Google Cloud Run for scalability and accessibility.
-- **User-Friendly Design:** Simple and intuitive web interface for searching and viewing archives.
+## Technical Stack
 
----
+- **Core Application**: Flask
+- **Database**: MySQL
+- **File Proxy Service**: Cloudflare Worker
+- **Hosting**: Google Cloud Run
+- **Storage**: Google Cloud Storage
 
-## **Table of Contents**
+### Why Flask?
+Flask offers simplicity, rapid deployment, and proven reliability, making it ideal for moderate traffic scenarios.
 
-1. [Installation](#installation)
-2. [Usage](#usage)
-3. [Features](#features)
-4. [Technologies Used](#technologies-used)
-5. [Deployment](#deployment)
-6. [License](#license)
+### Database Choice
+MySQL was chosen for its stability and seamless integration with Flask. Future improvements may involve migrating to MongoDB for flexibility and cost efficiency.
 
----
+### File Proxy Service
+A separate microservice via Cloudflare Workers was implemented to securely proxy PDF files, protecting files with expiring URLs.
 
-## **Installation**
+## Database Structure
+The database consists of four main tables:
 
-### Prerequisites
+1. **Category**: Organizes issues (`1-to-many` relationship with issues).
+2. **Newspaper Issue**: Stores metadata, file paths, and access control (`view_power`).
+3. **User**: Manages authentication and access levels.
+4. **Config**: Stores global settings, including stopwords and "About" page content.
 
-- Python 3.11 or later
-- MySQL server
-- Google Cloud CLI (for deployment)
-- Flask and related dependencies
+## Features
 
-### Steps
+### User Experience
+- **Homepage**: Overview and introduction.
+- **Archive Viewing**: Browse issues seamlessly.
+- **Date-based Navigation**: Easy access to specific issues by date.
+- **Search**: Efficient keyword-based document search.
+- **Document Viewing**: Secure, direct PDF viewing.
 
-1. **Clone the Repository**
+### Content Management
+- **About Page Management**
+- **Category Management**
+- **File Uploading**
+- **Issue Management**
+- **Stopword Management**
 
-   ```bash
-   git clone https://github.com/username/archive-website.git
-   cd archive-website
-   ```
+### User Administration
+- **Secure Authentication**
+- **User Management**: Admin tools for managing user roles and permissions.
+- **Admin Dashboard**: Centralized management of all settings.
 
-2. **Set Up Virtual Environment**
+### Security & Access Control
+Access to sensitive articles is managed by assigning users and documents a `view_power` level. Users can only access documents matching their permission level or lower.
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+## Performance Optimization
+Caching is implemented using `flask_caching` to optimize performance and reduce database load. Each database query function is cached, and caches are invalidated upon data modifications.
 
-3. **Install Dependencies**
+## Deployment
+- **Web Service**: Deployed via Docker on Google Cloud Run, proxied with Cloudflare Workers.
+- **Database**: Hosted on Google SQL with restricted access.
+- **File Proxy**: Cloudflare Workers with KV storage for expiring URLs.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Collaboration & Lessons Learned
+Our small team fostered a proactive, productive atmosphere with clear communication and regular updates. However, clear and precise instructions, especially for non-technical tasks, are crucial to maintaining momentum.
 
-4. **Set Up MySQL**
-   - Create a database for the archive.
-   - Run the provided SQL script to set up the schema:
-
-     ```bash
-     mysql -u your_username -p your_database < schema.sql
-     ```
-
-5. **Configure Configs**
-   Follow the comment in the `config.py`
-
-6. **Run the Application**
-
-   ```bash
-   python app.py
-   ```
-
----
-
-## **Usage**
-
-Open your browser and navigate to `http://127.0.0.1:5000`. Use admin account to login to manage issues and users using 'Admin' panel in menu; Or login with a normal user for basic search and download documents.
-
----
-
-## **Technologies Used**
-
-- **Backend:** Flask, SQLAlchemy
-- **Database:** MySQL with full-text search
-- **Deployment:** Google Cloud Run
-- **Storage:** Google Cloud Storage
-- **Frontend:** Basic HTML/CSS templates rendered via Jinja2
-
----
-
-## **Deployment**
-
-### Deploy on Google Cloud Run
-
-Fork this repo and deploy this repo using Google Cloud Run
-
----
-
-## **License**
-
-This project is licensed under the MIT License. See `LICENSE` for details.
+## Future Enhancements
+- Customizable themes (color palette, background image)
+- Admin password recovery mechanism
+- Migration from MySQL to MongoDB
+- Potential rewrite using FastAPI and Vue.js for modernizing the tech stack

@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<style>
+    form {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--secondary-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    h1, h2 {
+        color: var(--primary-color);
+        text-align: center;
+    }
+
+    .checkbox-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .checkbox-container input[type="checkbox"] {
+        margin-right: 10px;
+    }
+
+    .checkbox-container label {
+        margin: 0;
+        color: var(--primary-color);
+        font-weight: bold;
+    }
+
+    .category-form, .new-category {
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid var(--accent-color);
+        border-radius: 6px;
+        background-color: white;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    input[type="text"], textarea {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid var(--accent-color);
+        border-radius: 4px;
+        background-color: var(--secondary-color);
+    }
+
+    textarea {
+        resize: vertical;
+    }
+
+    input[type="checkbox"] {
+        margin-right: 10px;
+    }
+
+    .submit-button {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        color: white;
+        background-color: var(--primary-color);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .submit-button:hover {
+        background-color: var(--link-color);
+    }
+
+    .error {
+        color: var(--error-color);
+        font-size: 14px;
+        margin-top: -8px;
+        margin-bottom: 10px;
+    }
+</style>
+
+<h1>Manage Categories</h1>
+<form method="POST">
+    {{ manage_form.hidden_tag() }}
+
+    <!-- Existing Categories -->
+    <h2>Existing Categories</h2>
+    <div>
+        {% for category_form in manage_form.categories %}
+        <div class="category-form">
+            {{ category_form.hidden_tag() }}
+            {{ category_form.category_id() }}
+            <div>
+                <label>{{ category_form.category_name.label }}</label>
+                {{ category_form.category_name() }}
+            </div>
+            <div>
+                <label>{{ category_form.category_description.label }}</label>
+                {{ category_form.category_description() }}
+            </div>
+            <div class="checkbox-container">
+                <label>{{ category_form.confirm.label }}</label>
+                {{ category_form.confirm() }}
+            </div>
+            <div class="checkbox-container">
+                <label>{{ category_form.delete.label }}</label>
+                {{ category_form.delete() }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add New Category -->
+    <h2>Add New Category</h2>
+    <div class="new-category">
+        <div>
+            <label>{{ manage_form.new_name.label }}</label>
+            {{ manage_form.new_name() }}
+        </div>
+        <div>
+            <label>{{ manage_form.new_description.label }}</label>
+            {{ manage_form.new_description() }}
+        </div>
+        <div class="checkbox-container">
+            <label>{{ manage_form.new_confirm.label }}</label>
+            {{ manage_form.new_confirm() }}
+        </div>
+    </div>
+
+    <!-- Submit Button -->
+    <button type="submit" class="submit-button">{{ manage_form.submit.label.text }}</button>
+</form>
+{% endblock %}

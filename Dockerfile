@@ -22,4 +22,5 @@ ENV FLASK_APP=app.py
 EXPOSE 8080
 
 # Use Gunicorn as the application server
+# RUN python init.py
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app", "--log-level", "debug"]

@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, Response, Blueprint, current_app
+from flask import render_template, request, redirect, url_for, flash, Response, Blueprint, current_app, abort
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -31,7 +31,8 @@ def index():
     context = {
         'issued_time_start': min_date,
         'issued_time_end': max_date,
-        'about_content': about_html
+        'about_content': about_html,
+        'categories': get_all_category(),
     }
 
     return render_template('landingpage.html', **context)
@@ -61,6 +62,59 @@ def edit_about():
         form.about_content.data = config.about_content
     
     return render_template('edit_about.html', form=form)
+
+@main_bp.route('/admin/manage_categories', methods=['GET', 'POST'])
+@login_required
+@admin_required  # Ensure only admins can access this route
+def manage_categories():
+
+    # Query all categories
+    categories = Category.query.filter(Category.name != 'Uncategorized').all()
+
+    if request.method == 'POST':
+        manage_form = ManageCategoriesForm(request.form)
+        if manage_form.validate_on_submit():
+            # Process existing categories
+            for category_form in manage_form.categories.entries:
+                if category_form.confirm.data:  # Only process if confirm is checked
+                    category = Category.query.get(int(category_form.category_id.data))
+                    if category_form.delete.data:
+                        # Avoid deleting the default 'Uncategorized' category
+                        if category.issues.count() > 0:
+                            flash(f"Cannot delete category '{category.name}' because it has associated issues.", 'danger')
+                        else:
+                            db.session.delete(category)
+                    else:
+                        # Update category details
+                        category.name = category_form.category_name.data
+                        category.description = category_form.category_description.data
+            
+            # Process new category
+            if manage_form.new_name.data and manage_form.new_confirm.data:
+                new_category = Category(
+                    name=manage_form.new_name.data,
+                    description=manage_form.new_description.data
+                )
+                db.session.add(new_category)
+
+            db.session.commit()
+            flash('Categories updated successfully!', 'success')
+        else:
+            flash(f"Form validation failed: {manage_form.errors}", 'danger')
+        return redirect(url_for('main.manage_categories'))
+    else:
+        manage_form = ManageCategoriesForm()
+        # Pre-populate the categories FieldList
+        for category in categories:
+            category_form = manage_form.categories.append_entry()
+            if category:
+                category_form.category_id.data = category.id
+                category_form.category_name.data = category.name
+                category_form.category_description.data = category.description
+            # print(category.name)
+        
+
+    return render_template('manage_categories.html', manage_form=manage_form)
 
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -160,11 +214,16 @@ def add_user():
 @admin_required
 def upload():
     form = UploadForm()
+    
+    # Populate the category dropdown
+    form.category.choices = [(c.id, c.name) for c in Category.query.all()]
+    
     if form.validate_on_submit():
         file = form.file.data
         title = form.title.data
         author = form.author.data
         issued_time = form.issued_time.data
+        category_id = form.category.data  # Get the selected category ID
 
         # Generate a unique file name
         random_filename = secure_filename(generate_random_filename() + os.path.splitext(file.filename)[1])  # Preserve the original file extension
@@ -174,15 +233,17 @@ def upload():
         bucket = client.bucket(current_app.config['CLOUD_STORAGE_BUCKET'])
         blob = bucket.blob(random_filename)  # Use the unique random file name
         blob.upload_from_file(file)
-        cache.delete('get_issue_date_interval')
-        cache.delete('get_archive')
 
         # Extract text from PDF
         text_content = ""
         if file.filename.endswith('.pdf'):
+            file.seek(0)  # Reset the file pointer before reading it again
             with pdfplumber.open(file) as pdf:
                 for page in pdf.pages:
-                    text_content += page.extract_text() + "\n"
+                    text_content += page.extract_text().lower() + "\n"
+
+        # Assign the selected category or default to "Uncategorized"
+        category = Category.query.get(category_id) or Category.get_or_create_default()
 
         # Store in MySQL
         new_issue = NewspaperIssue(
@@ -190,20 +251,21 @@ def upload():
             author=author,
             issued_time=issued_time,
             content=text_content,  # Save the extracted text
-            file_blob=random_filename
+            file_blob=random_filename,
+            category=category  # Assign the selected category
         )
         db.session.add(new_issue)
-
-        # new_blob = SignedBlob(
-        #     blob_name = random_filename,
-        #     signed_url = 'placeholder'
-        # )
-        # db.session.add(new_blob)
         db.session.commit()
+
         flash('Newspaper issue uploaded successfully!')
+
+        # Update cache (if applicable)
+        update_cache(new_issue)
+        
         return redirect(url_for('main.upload'))
 
     return render_template('upload.html', form=form)
+
 
 @main_bp.route('/admin/stopwords', methods=['GET', 'POST'])
 @login_required
@@ -217,7 +279,7 @@ def manage_stopwords():
         db.session.add(config)
         db.session.commit()
     if form.validate_on_submit():
-        config.stopwords = form.stopwords.data.strip()
+        config.stopwords = form.stopwords.data.strip().lower()
         db.session.commit()
         cache.delete('stopwords')  # Invalidate the cached stopwords
         flash('Stopwords updated successfully.')
@@ -233,10 +295,16 @@ def manage_stopwords():
 def edit_issue(issue_id):
     # Fetch the issue from the database
     issue = NewspaperIssue.query.get_or_404(issue_id)
-    
+
     # Create the form and populate it with the existing issue data
     form = UpdateForm(obj=issue)
-    
+
+    # Populate the category field with existing categories from the database
+    form.category.choices = []
+    for c in Category.query.all():
+        if c:
+            form.category.choices.append((c.id, c.name))
+
     if form.validate_on_submit():
         try:
             # Update the issue fields from the form data
@@ -245,36 +313,45 @@ def edit_issue(issue_id):
             issue.issued_time = form.issued_time.data
             issue.view_power = form.view_power.data
             
+            # Update the category (fallback to default if none is selected)
+            issue.category = Category.query.get(form.category.data) or Category.get_or_create_default()
+
             # Handle file upload
             if form.file.data:
-                # Secure the filename and save the file
-                # Generate a unique file name
-                random_filename = secure_filename(generate_random_filename() + os.path.splitext(file.filename)[1])  # Preserve the original file extension
                 file = form.file.data
+                random_filename = secure_filename(
+                    generate_random_filename() + os.path.splitext(file.filename)[1]
+                )  # Preserve the original file extension
+
                 # Upload to Google Cloud Storage
                 client = storage.Client()
                 bucket = client.bucket(current_app.config['CLOUD_STORAGE_BUCKET'])
-                blob = bucket.blob(random_filename)  # Use the unique random file name
+                blob = bucket.blob(random_filename)
                 blob.upload_from_file(file)
 
                 # Extract text from PDF
-                text_content = ""
                 if file.filename.endswith('.pdf'):
+                    text_content = ""
                     with pdfplumber.open(file) as pdf:
                         for page in pdf.pages:
                             text_content += page.extract_text() + "\n"
+                    issue.content = text_content  # Update the content field
+
+                # Update the file_blob field in the database with the new filename
+                issue.file_blob = random_filename
 
             # Commit changes to the database
             db.session.commit()
-            cache.delete_memoized(get_issue,issue.id)
-            cache.delete('get_issue_date_interval')
-            cache.delete('get_archive')
+
+            # Update cache or any relevant external data
+            update_cache(issue)
+
             flash('The issue was successfully updated.', 'success')
-            return redirect(url_for('main.view_document', issue_id=issue.id))  # Replace 'view_issue' with your view route
+            return redirect(url_for('main.view_document', issue_id=issue.id))  # Replace with the correct route
         except Exception as e:
             db.session.rollback()
             flash(f'An error occurred: {str(e)}', 'danger')
-    
+
     return render_template('edit_issue.html', form=form, issue=issue)
 
 
@@ -283,19 +360,24 @@ def edit_issue(issue_id):
 @admin_required
 def delete_issue(issue_id):
     issue = get_issue(issue_id)
+    update_cache(issue)
     # blob = db.session.query(SignedBlob).filter_by(blob_name=issue.blob_name).first()
     # db.session.delete(blob)
     db.session.delete(issue)
     db.session.commit()
     flash('Newspaper issue deleted successfully!')
-    return redirect(url_for('main.admin_dashboard'))
+    return redirect(url_for('main.search'))
 
 @main_bp.route('/archive')
 @login_required
 def archive():
+    """
+    Displays a year-month view of all issues. Each month links to a month view
+    where issues are displayed, labeled by their dates.
+    """
     # Query all newspaper issues, ordered by issued_time descending
     issues = get_archive()
-    
+
     # Organize issues by year and month
     issues_by_month = defaultdict(list)
     issues_by_year = defaultdict(list)
@@ -306,19 +388,88 @@ def archive():
         issues_by_month[year_month].append(issue)
         if month not in issues_by_year[year]:
             issues_by_year[year].append(month)
-    
+
     # Sort the years and months
     sorted_years = sorted(issues_by_year.keys(), reverse=True)
-    issues_by_year = {year: sorted(issues_by_year[year]) for year in sorted_years}
-    
-    # List of month names
-    months_list = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    
+    issues_by_year = {
+        year: sorted(issues_by_year[year])
+        for year in sorted_years
+    }
+
+    # Generate month view URLs for each month
+    month_urls = {
+        f"{year}-{month}": url_for('main.month_view', year=year, month=month)
+        for year in issues_by_year
+        for month in issues_by_year[year]
+    }
+
     return render_template('archive.html',
                            issues_by_year=issues_by_year,
                            issues_by_month=issues_by_month,
-                           months_list=months_list)
+                           months_list=MONTHS_LIST,
+                           month_urls=month_urls)
+
+@main_bp.route('/archive/<int:year>/<int:month>')
+@login_required
+def month_view(year, month):
+    """
+    Displays all issues for a specific month in a calendar-like view.
+    """
+    # Query issues for the specified year and month
+    issues = get_year_month_issues(year,month)
+
+    # Serialize issues to a list of dictionaries
+    serialized_issues = [
+        {
+            "id": issue.id,
+            "title": issue.title,
+            "issued_time": issue.issued_time.strftime('%Y-%m-%d'),  # Format as string
+            "url": url_for('main.view_document', issue_id=issue.id),
+            "author": issue.author,
+        }
+        for issue in issues
+    ]
+
+    # Render template with serialized issues
+    return render_template(
+        'month_view.html',
+        year=year,
+        month=month,
+        issues=serialized_issues,
+        months_list=MONTHS_LIST,
+    )
+
+@main_bp.route('/archive/<int:year>/<int:month>/<int:day>')
+@login_required
+def day_view(year, month, day):
+    """
+    Displays all issues for a specific day in a detailed list view.
+    """
+    # Query issues for the specified year, month, and day
+    issues = get_day_issues(year, month, day)
+
+    # Serialize issues to a list of dictionaries
+    serialized_issues = [
+        {
+            "id": issue.id,
+            "title": issue.title,
+            "issued_time": issue.issued_time.strftime('%Y-%m-%d'),  # Include time for more detail
+            "url": url_for('main.view_document', issue_id=issue.id),
+            "author": issue.author,
+        }
+        for issue in issues
+    ]
+
+    # Render template with serialized issues
+    return render_template(
+        'day_view.html',
+        year=year,
+        month=month,
+        day=day,
+        issues=serialized_issues,
+        months_list=MONTHS_LIST,
+    )
+
 
 @main_bp.route('/search', methods=['GET'])
 @login_required
@@ -328,6 +479,7 @@ def search():
     author_query = request.args.get('author')
     issued_time_start = request.args.get('issued_time_start')
     issued_time_end = request.args.get('issued_time_end')
+    category_query = request.args.get('category')  # Get the selected category ID
     page = request.args.get('page', 1, type=int)  # Get the current page number
 
     # Get the min and max issued_time from the database
@@ -339,15 +491,20 @@ def search():
     # Ensure only results with an appropriate view_power are shown
     filters.append(NewspaperIssue.view_power <= current_user.view_power)
 
+    # Filter by title
     if title_query:
         context['title_query'] = title_query
         filters.append(NewspaperIssue.title.like(f'%{title_query}%'))
+
+    # Filter by author
     if author_query:
         context['author_query'] = author_query
         filters.append(NewspaperIssue.author.like(f'%{author_query}%'))
+
+    # Filter by content (using full-text search)
     if ori_query:
         context['query'] = ori_query
-        query = remove_stopwords(ori_query)
+        query = clean_query(ori_query)
         filters.append(NewspaperIssue.content.match(query))
 
     # Parse issued_time_start
@@ -366,6 +523,11 @@ def search():
 
     filters.append(NewspaperIssue.issued_time.between(issued_time_start, issued_time_end))
 
+    # Filter by category if a category is selected
+    if category_query:
+        context['category_query'] = int(category_query)  # Store selected category ID in the context
+        filters.append(NewspaperIssue.category_id == int(category_query))
+
     # Modify the query to use pagination
     per_page = 15  # Number of results per page
     pagination = NewspaperIssue.query.filter(*filters).order_by(NewspaperIssue.issued_time.desc()).paginate(
@@ -373,30 +535,34 @@ def search():
     )
     results = pagination.items
 
+    # Add pagination and results to the context
     context['results'] = results
     context['pagination'] = pagination
+
+    # Add categories to the context for dropdown rendering
+    context['categories'] = get_all_category()
 
     return render_template(
         'results.html',
         **context
     )
 
-@main_bp.route('/file/<path:blob_name>', methods=['GET'])
-def proxy_to_signed_url(blob_name):
-    # Generate the signed URL
-    signed_url = get_db_signed_url(blob_name)
-    if signed_url:
-    # Fetch the content from the signed URL
-        response = requests.get(signed_url, stream=True)
+# @main_bp.route('/file/<path:blob_name>', methods=['GET'])
+# def proxy_to_signed_url(blob_name):
+#     # Generate the signed URL
+#     signed_url = get_db_signed_url(blob_name)
+#     if signed_url:
+#     # Fetch the content from the signed URL
+#         response = requests.get(signed_url, stream=True)
 
-        # Proxy the response back to the client
-        return Response(
-            response.iter_content(chunk_size=8192),
-            content_type=response.headers.get('Content-Type'),
-            status=response.status_code
-        )
-    else:
-        return "file not available"
+#         # Proxy the response back to the client
+#         return Response(
+#             response.iter_content(chunk_size=8192),
+#             content_type=response.headers.get('Content-Type'),
+#             status=response.status_code
+#         )
+#     else:
+#         return abort(404)
 
 
 @main_bp.route('/view_document/<int:issue_id>')
@@ -406,9 +572,32 @@ def view_document(issue_id):
     issue = get_issue(issue_id)
     if current_user.view_power<issue.view_power:
         return redirect('/')
-    tmp_blob_name=generate_random_filename()+'.'+str(issue.file_blob).split('.')[-1]
-    proxied_url = url_for('main.proxy_to_signed_url', blob_name=tmp_blob_name, _external=True)
-    create_signed_url(issue.file_blob,tmp_blob_name)
+    signed_url = create_signed_url(issue.file_blob)
+    # Generate the temporary URL using the Worker
+    # Get the worker endpoint and expiration settings from the app configuration
+    worker_url = current_app.config.get('CLOUDFLARE_PROXY_WORKER_URL')
+    if not worker_url:
+        current_app.logger.error("Worker URL not configured.")
+        return redirect('/')
+    
+    expire_in_seconds = current_app.config.get('FILE_LINK_EXPIRE_TIME_SEC', 3600) - 1  # Default to 3600 seconds if not set
+
+    try:
+        # Call the Worker to generate the temporary URL
+        response = requests.get(worker_url, params={
+            'signedUrl': signed_url,
+            'expireSeconds': expire_in_seconds  # Use correct parameter name
+        })
+        response.raise_for_status()
+
+        # Parse the Worker response
+        proxied_url = response.json().get('tmpLink')  # Use 'tmpLink' to match Worker response key
+        if not proxied_url:
+            current_app.logger.error('Failed to retrieve temporary link from Worker response.')
+            return redirect('/')
+    except requests.RequestException as e:
+        current_app.logger.error(f'Error calling the Worker: {e}')
+        return redirect('/')
 
     return render_template('view_pdf.html', issue=issue, query=query, file_url=proxied_url)
 
@@ -432,13 +621,52 @@ def logout():
     logout_user()
     return redirect('/')
 
-# Error handler for 401 Unauthorized
+@main_bp.errorhandler(400)
+@cache.cached(timeout=86400)
+def bad_request(error):
+    context = {
+        'title': 400,
+        'error_info': "Bad Request! Your browser sent a request that this server couldn't understand.",
+        'emoji': '❌',
+    }
+    return render_template('error.html', **context), 400
+
 @main_bp.errorhandler(401)
-# @cache.cached(timeout=86400)
-def unauthorized_error(error):
-    return render_template('errors/unauthorized.html'), 401
+@cache.cached(timeout=86400)
+def unauthorized(error):
+    context = {
+        'title': 401,
+        'error_info': "Unauthorized! You need to log in to access this resource.",
+        'emoji': '🔒',
+    }
+    return render_template('error.html', **context), 401
+
+@main_bp.errorhandler(403)
+@cache.cached(timeout=86400)
+def forbidden(error):
+    context = {
+        'title': 403,
+        'error_info': "Forbidden! You don't have permission to access this resource.",
+        'emoji': '⛔',
+    }
+    return render_template('error.html', **context), 403
 
 @main_bp.errorhandler(404)
 @cache.cached(timeout=86400)
 def page_not_found(error):
-    return render_template('errors/404.html'), 404
+    context = {
+        'title': 404,
+        'error_info': "Oops! The page you were looking for doesn’t exist.",
+        'emoji': '🚀',
+    }
+    return render_template('error.html', **context), 404
+
+@main_bp.errorhandler(408)
+@cache.cached(timeout=86400)
+def request_timeout(error):
+    context = {
+        'title': 408,
+        'error_info': "Request Timeout! The server timed out waiting for your request.",
+        'emoji': '⏳',
+    }
+    return render_template('error.html', **context), 408

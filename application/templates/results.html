@@ -117,15 +117,16 @@
         <div class="result-item">
             <h3>{{ result.title }}</h3>
             <p class="meta-info">
-                By {{ result.author }} | Issued on: {{ result.issued_time.strftime('%Y-%m-%d') }}
+                By {{ result.author }} | Issued on: {{ result.issued_time.strftime('%Y-%m-%d') }} 
+                | Category: {{ result.category.name }}
             </p>
             <div class="action-buttons">
                 <a class="view-link" href="{{ url_for('main.view_document', issue_id=result.id, q=request.args.get('q')) }}">View Document</a>
                 {% if current_user.is_authenticated and current_user.role == 'admin' %}
                     <form method="POST" action="{{ url_for('main.delete_issue', issue_id=result.id) }}">
-                        <button type="submit">Delete(No Confirm)</button>
+                        <button type="submit">Delete (No Confirm)</button>
                     </form>
-                    <a href="{{ url_for('main.edit_issue', issue_id=result.id)}}">edit</a>
+                    <a href="{{ url_for('main.edit_issue', issue_id=result.id) }}">Edit</a>
                 {% endif %}
             </div>
         </div>

@@ -1,0 +1,96 @@
+{% extends 'layout.html' %}
+
+{% block custom_styles %}
+<style>
+/* Day View Styles */
+.day-header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: var(--primary-color);
+}
+
+.issue-item {
+    border: 1px solid var(--accent-color);
+    background-color: var(--secondary-color);
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.issue-item h3 {
+    margin-top: 0;
+    color: var(--primary-color);
+    font-size: 1.5em;
+}
+
+.issue-item .meta-info {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.issue-item .actions {
+    margin-top: 10px;
+}
+
+.issue-item a.view-link {
+    color: var(--link-color);
+    text-decoration: none;
+    font-weight: bold;
+    margin-right: 15px;
+}
+
+.issue-item a.view-link:hover {
+    text-decoration: underline;
+}
+
+.issue-item .admin-buttons form,
+.issue-item .admin-buttons a {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.issue-item .admin-buttons button {
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.issue-item .admin-buttons button:hover {
+    background-color: #005b96; /* Slightly darker shade */
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="day-header">Issues for {{ day }} {{ months_list[month - 1] }} {{ year }}</h1>
+
+{% if issues %}
+    <div class="issue-list">
+        {% for issue in issues %}
+            <div class="issue-item">
+                <h3>{{ issue.title }}</h3>
+                <p class="meta-info">
+                    Issued on: {{ issue.issued_time }} | By {{ issue.author }}
+                </p>
+                <div class="actions">
+                    <a class="view-link" href="{{ issue.url }}">View Document</a>
+                </div>
+
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No issues available for {{ day }} {{ months_list[month - 1] }} {{ year }}.</p>
+{% endif %}
+
+<a href="{{ url_for('main.month_view', year=year, month=month) }}" class="btn btn-secondary">Back to Calendar</a>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% endblock %}

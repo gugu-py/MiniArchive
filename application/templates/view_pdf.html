@@ -69,7 +69,7 @@
     <div class="document-header">
         <h2>{{ issue.title }}</h2>
         <div class="meta-info">
-            <p><strong>Author:</strong> {{ issue.author }}</p>
+            <p><strong>Author:</strong> {{ issue.author }} <strong>Category:</strong> {{ issue.category.name }}</p>
             <p><strong>Issued on:</strong> {{ issue.issued_time.strftime('%Y-%m-%d') }}</p>
         </div>
         <div class="download-links">
@@ -97,85 +97,102 @@
     
 
     <!-- PDF Viewer -->
+<div id="iframe-container" style="text-align: center; margin: 20px;">
+    <p id="countdown" style="font-size: 1.2rem; color: var(--primary-color);">Loading in 3 seconds...</p>
     <iframe
-    src="https://drive.google.com/viewerng/viewer?embedded=true&url={{file_url}}"
-    width="100%"
-    height="600px"
-    style="border: none;"
-    allowfullscreen>
+        id="lazy-iframe"
+        src="https://drive.google.com/viewerng/viewer?embedded=true&url={{file_url | safe}}"
+        width="100%"
+        height="600px"
+        style="border: none; display: none;"
+        allowfullscreen>
     </iframe>
+    <button id="expand-button" style="
+        display: none; 
+        margin: 10px auto; 
+        padding: 10px 15px; 
+        background-color: var(--primary-color); 
+        color: var(--secondary-color); 
+        border: none; 
+        border-radius: 5px; 
+        cursor: pointer; 
+        font-size: 1rem;">
+        Expand View
+    </button>
+</div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const iframe = document.querySelector("iframe");
-            const button = document.createElement("button");
-    
-            // Set up the button's initial properties
-            button.textContent = "Expand View";
-            button.style.display = "block";
-            button.style.margin = "10px auto";
-            button.style.padding = "10px 15px";
-            button.style.backgroundColor = "var(--primary-color)";
-            button.style.color = "var(--secondary-color)";
-            button.style.border = "none";
-            button.style.borderRadius = "5px";
-            button.style.cursor = "pointer";
-            button.style.fontSize = "1rem";
-    
-            // Append the button after the iframe
-            iframe.parentElement.appendChild(button);
-    
-            // Expand or collapse the iframe when the button is clicked
-            button.addEventListener("click", () => {
-                if (!iframe.classList.contains("expanded")) {
-                    expandIframe();
-                } else {
-                    collapseIframe();
-                }
-            });
-    
-            // Function to expand the iframe
-            function expandIframe() {
-                iframe.classList.add("expanded");
-                iframe.style.position = "fixed";
-                iframe.style.top = "50%";
-                iframe.style.left = "50%";
-                iframe.style.transform = "translate(-50%, -50%)";
-                iframe.style.width = "90%";
-                iframe.style.height = "90vh";
-                iframe.style.zIndex = "1000";
-                iframe.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.5)";
-                iframe.style.border = "2px solid var(--primary-color)";
-                button.textContent = "Collapse View";
-    
-                // Add click listener to collapse when clicking outside
-                document.addEventListener("click", outsideClickListener);
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const iframe = document.getElementById("lazy-iframe");
+        const countdown = document.getElementById("countdown");
+        const button = document.getElementById("expand-button");
+        let countdownValue = 3;
+
+        // Countdown logic
+        const interval = setInterval(() => {
+            countdownValue--;
+            countdown.textContent = `Loading in ${countdownValue} seconds...`;
+            if (countdownValue === 0) {
+                clearInterval(interval);
+                countdown.style.display = "none";
+                iframe.style.display = "block";
+                button.style.display = "block";
             }
-    
-            // Function to collapse the iframe
-            function collapseIframe() {
-                iframe.classList.remove("expanded");
-                iframe.style.position = "static";
-                iframe.style.transform = "none";
-                iframe.style.width = "100%";
-                iframe.style.height = "600px";
-                iframe.style.zIndex = "auto";
-                iframe.style.boxShadow = "none";
-                iframe.style.border = "none";
-                button.textContent = "Expand View";
-    
-                // Remove click listener for outside clicks
-                document.removeEventListener("click", outsideClickListener);
-            }
-    
-            // Function to handle clicks outside the iframe
-            function outsideClickListener(event) {
-                if (!iframe.contains(event.target) && !button.contains(event.target)) {
-                    collapseIframe();
-                }
+        }, 1000);
+
+        // Button click logic for expanding/collapsing the iframe
+        button.addEventListener("click", () => {
+            if (!iframe.classList.contains("expanded")) {
+                expandIframe();
+            } else {
+                collapseIframe();
             }
         });
-    </script>
+
+        // Expand iframe
+        function expandIframe() {
+            iframe.classList.add("expanded");
+            iframe.style.position = "fixed";
+            iframe.style.top = "50%";
+            iframe.style.left = "50%";
+            iframe.style.transform = "translate(-50%, -50%)";
+            iframe.style.width = "90%";
+            iframe.style.height = "90vh";
+            iframe.style.zIndex = "1000";
+            iframe.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.5)";
+            iframe.style.border = "2px solid var(--primary-color)";
+            button.textContent = "Collapse View";
+
+            // Close iframe when clicking outside
+            document.addEventListener("click", outsideClickListener);
+        }
+
+        // Collapse iframe
+        function collapseIframe() {
+            iframe.classList.remove("expanded");
+            iframe.style.position = "static";
+            iframe.style.transform = "none";
+            iframe.style.width = "100%";
+            iframe.style.height = "600px";
+            iframe.style.zIndex = "auto";
+            iframe.style.boxShadow = "none";
+            iframe.style.border = "none";
+            button.textContent = "Expand View";
+
+            // Remove outside click listener
+            document.removeEventListener("click", outsideClickListener);
+        }
+
+        // Outside click listener to collapse iframe
+        function outsideClickListener(event) {
+            if (!iframe.contains(event.target) && !button.contains(event.target)) {
+                collapseIframe();
+            }
+        }
+    });
+</script>
+
+    
     
     
     

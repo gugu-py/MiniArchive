@@ -97,10 +97,18 @@ Caching is implemented using `flask_caching` to optimize performance and reduce 
      mysql -u your_username -p your_database < schema.sql
      ```
 
-5. **Configure Configs**
+5. **Configure Cloud Run Domain** (Optional)
+   Set up your Cloud Run domain and update the `targetUrl` in `worker/domain_proxy_worker.js` with your Cloud Run domain.
+
+6. **Configure file proxy worker**
+
+  Copy the `worker/file_proxy_worker.js` code to your Cloudflare worker, and setup a KV database named `TEMP_LINKS`.
+
+
+7. **Configure Configs**
    Follow the comment in the `config.py`
 
-6. **Run the Application**
+8. **Run the Application**
 
    ```bash
    python app.py

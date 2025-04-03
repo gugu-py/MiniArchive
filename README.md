@@ -58,10 +58,54 @@ Access to sensitive articles is managed by assigning users and documents a `view
 ## Performance Optimization
 Caching is implemented using `flask_caching` to optimize performance and reduce database load. Each database query function is cached, and caches are invalidated upon data modifications.
 
-## Deployment
-- **Web Service**: Deployed via Docker on Google Cloud Run, proxied with Cloudflare Workers.
-- **Database**: Hosted on Google SQL with restricted access.
-- **File Proxy**: Cloudflare Workers with KV storage for expiring URLs.
+## Usage
+
+### Prerequisites
+
+- Python 3.11 or later
+- MySQL server
+- Google Cloud CLI (for deployment)
+- Flask and related dependencies
+
+### Steps
+
+1. **Clone the Repository**
+
+   ```bash
+   git clone https://github.com/gugu-py/MiniArchive
+   cd MiniArchive
+   ```
+
+2. **Set Up Virtual Environment**
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install Dependencies**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Set Up MySQL**
+   - Create a database for the archive.
+   - Run the provided SQL script to set up the schema:
+
+     ```bash
+     mysql -u your_username -p your_database < schema.sql
+     ```
+
+5. **Configure Configs**
+   Follow the comment in the `config.py`
+
+6. **Run the Application**
+
+   ```bash
+   python app.py
+   ```
+
 
 ## Collaboration & Lessons Learned
 Our small team fostered a proactive, productive atmosphere with clear communication and regular updates. However, clear and precise instructions, especially for non-technical tasks, are crucial to maintaining momentum.
